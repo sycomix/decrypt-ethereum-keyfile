@@ -1,12 +1,29 @@
 Decrypt Ethereum Keyfile
 ========================
 
-The sample keyfile is generated from a private key 1 encrypted witht he password "a":
+The sample keyfile is generated from a private key 1 encrypted with the password "a":
 
 ```bash
+# cd into a temporary working directory
+cd $(mkdir -d)
+
+# Make a key
 echo "0000000000000000000000000000000000000000000000000000000000000001" > plain_key.txt
 geth --datadir . account import plain_key.txt
 ```
+To run, pass in the path of the keyfile as the first argument to `main.py`. For example:
+
+```bash
+./main.py UTC--2019-07-10T14-02-05.192559973Z--7e5f4552091a69125d5dfcb7b8c2659029395bdf
+```
+
+You could repeat the process with a randomly generated 32 byte value represented as a hexadecimal string for test purposes:
+
+* Generate a private key
+* Repeat the steps above to create an encrypted keyfile
+* Run `main.py` with the keyfile as input
+* Enter password when prompted
+* Output should be your original secret 
 
 Dependencies
 ------------
