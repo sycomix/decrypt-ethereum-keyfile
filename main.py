@@ -30,7 +30,6 @@ def main(filename):
         decrypted_private_key = dec_suite.decrypt(bytes.fromhex(data["ciphertext"]))
         print(decrypted_private_key.hex())
 
-
     else:
         print("Password NOT verified.")
 
