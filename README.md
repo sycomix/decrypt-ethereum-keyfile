@@ -48,9 +48,12 @@ Message Authentication
 ----------------------
 Once the decryption key is derived from the password, it is authenticated by:
 
-* Taking the first 16 bytes of the key, and concatenating these with the ciphertext bytes.
+* Removing the first 16 bytes from the derived key.
+* Concatenating this value (key excluding first 16 bytes) with the ciphertext bytes.
 * Comparing the keccak hash of this value with the value of the `crypto.mac` field.
 * If these values are the same, the key is authentic.
+
+From [password_verify.py][7]:
 
 ```py
 #!/usr/bin/env python3
@@ -117,3 +120,4 @@ References
 [4]: https://bitcoin.org/en/developer-reference#dumpprivkey
 [5]: https://github.com/ethereum/go-ethereum
 [6]: https://en.wikipedia.org/wiki/Scrypt
+[7]: /password_verify.py
