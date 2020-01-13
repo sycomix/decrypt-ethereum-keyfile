@@ -1,31 +1,52 @@
 # Decrypt Ethereum Keyfile
 Decrypt an Ethereum keyfile to recover the original private key.
 
-Usage
------
-* Install dependencies listed in `requirements.txt`.
-* Run `./main.py` with a path to an Ethereum keyfile as the first command-line argument.
-* Enter your password when prompted.
-* If the password is correct, the private key will be output to stdout.
-
 __Be careful with your private keys__. If you use this repo to decrypt your private key from an Ethereum keyfile and a malicious person gets hold of it, they gain control over all funds held by that private key.
 
 In my case, I wanted to ensure that I could access my private keys without necessarily relying on `geth` - so this repo is something of an academic exercise.
 
 If you want to make a backup of Ethereum keys, just backup the keyfiles - the private key is encrypted already, and any Ethereum client should be able to use the keyfile format. This assumes of course that you have used a strong passphrase to secure your keys. 
 
+Table of Contents
+-----------------
+* [Introduction](#introduction)
+* [Generate an Ethereum Keyfile](#generate-an-ethereum-keyfile)
+* [Usage](#usage)
+* [Encryption of Keys in Ethereum](#encryption-of-keys-in-ethereum)
+* [Key Derivation](#key-derivation)
+* [Verify Password by Message Authentication](#verify-password-by-message-authentication)
+* [Decryption](#decryption)
+* [Dependencies](#dependencies)
+* [References](#references)
+
 Introduction
 ------------
-Ethereum keyfiles include a password encrypted private key along with additional metadata relating to the encryption scheme. Keyfiles are stored by default in a `keystore` directory.
+In cryptocurrencies like Bitcoin and Ethereum, private keys define ownership of assets on a public blockchain. As such, it is vitally important that such keys are not exposed - access to private keys is synonymous with access to funds.
 
-Keyfiles are in JSON format.
+In the case of the Bitcoin Core client (the original cryptocurrency client), private keys are stored in an internal database. By default, this is named `wallet.dat` and located in the `wallets` subdirectory of the Bitcoin data directory. The wallet file is a Berkeley DB file that contains keys and related transactions. The wallet file is not a text file and is not human-readable, and users have the choice whether or not to encrypt the wallet.
+
+Wallet encryption involves encrypting the private keys with a random master key which is in turn symmetrically encrypted using a key derived from passphrase - [full description of the relevant encryption protocols][11]. Keys are decrypted only when necessary, either by GUI prompt or by means of the `walletpassphrase` command. An encrypted wallet file is fairly tightly coupled to the Bitcoin Core client - you really need the core client to parse the wallet. However, Bitcoin Core provides an option for exporting private keys by means of the `dumpprivkey` CLI command - keys might then be imported into other wallet software.
+
+Ethereum keyfiles are JSON text files that are comprised of a symmetrically encrypted private key along with additional metadata relating to the encryption scheme. Keyfiles are stored by default in a `keystore` directory, and are human readable. Each keyfile provides the encrypted key, along with the metadata required to decrypt it.
 
 [Go Ethereum][5] is the official Golang implementation of the Ethereum protocol. It's CLI client, `geth`, does not allow private keys to be exported in plaintext. This is in contrast to Bitcoin Core where the `dumpprivkey` command provides access to decrypted private keys.
 
-The purpose of this project is to decrypt the Ethereum private key from the keyfile when the password is known.
+The Ethereum approach is interesting in that keyfiles contain information relating to their decryption. You could easily print an Ethereum keyfile and have a paper-backup of the key, the security of which is determined by your passphrase.
 
-Example Ethereum Keyfile
-------------------------
+Generate an Ethereum Keyfile
+----------------------------
+Geth will generate a keyfile from a supplied private key, which should be 32 bytes long expressed as a hex string:
+
+```bash
+# cd into a temporary working directory
+cd $(mktemp -d)
+
+# Make a private key from 32 pseudo-random bytes
+head -c 32 /dev/random | xxd -ps -c 32 > plain_key.txt
+
+# Make an Ethereum key file - assumes geth is installed, prompts for password
+geth --datadir . account import plain_key.txt
+```
 The sample keyfile shown below is generated from a private key `82633960e2a725ab641067a12b05fcaeca860d45ba785f634318490261e5d1a1` - 32 pseudo-random bytes - encrypted with the password "password123":
 
 ```json
@@ -52,8 +73,16 @@ The sample keyfile shown below is generated from a private key `82633960e2a725ab
 }
 
 ```
-Encryption Scheme
------------------
+
+Usage
+-----
+* Install dependencies listed in `requirements.txt`.
+* Run `./main.py` with a path to an Ethereum keyfile as the first command-line argument.
+* Enter your password when prompted.
+* If the password is correct, the private key will be output to stdout.
+
+Encryption of Keys in Ethereum
+------------------------------
 The keyfile holds the encrypted private key in the `crypto.ciphertext` field.
 
 The encryption scheme is an AES-128-CTR cipher, using scrypt as a key derivation function (to derive a block cipher key from a text-based password) and message authentication code (MAC) to authenticate the password.
@@ -92,8 +121,8 @@ def key(password, data):
     return key  
 ```
 
-Message Authentication
-----------------------
+Verify Password by Message Authentication
+-----------------------------------------
 Once the decryption key is derived from the password, it is authenticated by:
 
 * Removing the first 16 bytes from the derived key.
@@ -124,30 +153,6 @@ This project uses the AES function from the [Crypto.Cipher][9] package.
 Generate a Private Key and Keyfile for Testing
 ----------------------------------------------
 
-* Generate a private key
-* Create an encrypted Ethereum keyfile
-* Run `main.py` with the newly generated keyfile as input
-* Enter password when prompted 
-* Output should be the original private key 
-
-```bash
-# cd into a temporary working directory
-cd $(mktemp -d)
-
-# Make a private key from 32 pseudo-random bytes
-head -c 32 /dev/random | xxd -ps -c 32 > plain_key.txt
-
-# Make an Ethereum key file - assumes geth is installed, prompts for password
-geth --datadir . account import plain_key.txt
-```
-Pass in the path of the keyfile as the first argument to `main.py`. For example:
-
-```bash
-./main.py UTC--2019-07-10T14-02-05.192559973Z--7e5f4552091a69125d5dfcb7b8c2659029395bdf
-```
-
-You'll be prompted for the password and the original private key will be output.
-
 Dependencies
 ------------
 Project developed on Ubuntu 18.04. On Ubuntu 16.04, `scrypt` module doesn't have the required OpenSSL version to carry out the necessary hashing. You could upgrade OpenSSL, or spin up a Ubuntu 18.04 VM.
@@ -156,6 +161,8 @@ The `sha3` module from [pysha3][1] is used for keccak hashing.
 
 References
 ----------
+* [Good description of Ethereum wallet encryption][10]
+* [Bitcoin wallet encryption][11]
 * [Pysha3][1] - SHA-3 wrapper(keccak) for Python
 * [Keccak code package][2]
 * [Useful Stack Exchange answer][3]
@@ -173,3 +180,5 @@ References
 [7]: /password_verify.py
 [8]: /derive_key.py
 [9]: https://pycryptodome.readthedocs.io/en/latest/src/cipher/cipher.html
+[10]: https://cryptobook.nakov.com/symmetric-key-ciphers/ethereum-wallet-encryption
+[11]: https://en.bitcoin.it/wiki/Wallet_encryption
