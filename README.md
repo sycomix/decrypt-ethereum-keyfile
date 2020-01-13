@@ -150,9 +150,6 @@ Once the encryption key has been derived from the user-supplied password and the
 
 This project uses the AES function from the [Crypto.Cipher][9] package. 
 
-Generate a Private Key and Keyfile for Testing
-----------------------------------------------
-
 Dependencies
 ------------
 Project developed on Ubuntu 18.04. On Ubuntu 16.04, `scrypt` module doesn't have the required OpenSSL version to carry out the necessary hashing. You could upgrade OpenSSL, or spin up a Ubuntu 18.04 VM.
